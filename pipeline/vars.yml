@@ -1,0 +1,6 @@
+dockerfile-git-uri: http://gogs:3000/student/lab-assets
+yml2env-git-uri: http://gogs:3000/student/yml2env
+docker-registry-source: 
+  repository: dockerregistry:5000/student/golang-image
+  insecure_registries: 
+    - dockerregistry:5000

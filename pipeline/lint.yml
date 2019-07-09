@@ -1,0 +1,20 @@
+platform: linux
+inputs:
+- name: cli-code
+image_resource:
+ type: docker-image
+ source:
+   repository: dockerregistry:5000/student/golang-image
+   insecure_registries:
+   - "dockerregistry:5000"
+run:
+ path: /bin/sh
+ args:
+   - -xc
+   - |
+     set -eu
+
+     mkdir -p /go/src/github.com/EngineerBetter
+     cp -r cli-code /go/src/github.com/EngineerBetter/yml2env
+     cd /go/src/github.com/EngineerBetter/yml2env
+     gometalinter --disable-all --enable=ineffassign --enable=deadcode
