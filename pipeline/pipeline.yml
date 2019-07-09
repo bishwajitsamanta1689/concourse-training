@@ -6,6 +6,22 @@ resources:
    uri: http://gogs:3000/student/lab-assets
    branch: master
 
+- name: cli-code
+  type: git
+  source:
+    uri: http://gogs:3000/student/yml2env
+    branch: master
+
+- name: release-candidate
+  type: s3
+  source: 
+    endpoint: minio1:9000
+    disable_ssl: true
+    bucket: release-candidates
+    regexp: yml2env-(.*)
+    access_key_id: access_key
+    secret_access_key: secret_access_key
+
 - name: golang-image
   type: docker-image
   source:
@@ -22,3 +38,35 @@ jobs:
       build: dockerfile-repo
     get_params: 
       rootfs: true
+- name: compile
+  plan: 
+  - get: cli-code
+  - task: go-build
+    config:
+      platform: linux
+      # Define the Docker image to use as the filesystem for this task
+      image_resource:
+        type: docker-image
+        source: 
+          repository: dockerregistry:5000/student/golang-image
+          insecure_registries: ["dockerregistry:5000"]
+      # Tell Concourse which things to mount into the container
+      inputs:
+      - name: cli-code
+      outputs:
+      - name: built-binary
+      
+      run:
+        path: /bin/sh
+        args:
+        - -xc
+        - |
+          mkdir -p src/github.com/EngineerBetter/yml2env
+          mv cli-code/* src/github.com/EngineerBetter/yml2env
+          export GOPATH=$PWD
+          cd src/github.com/EngineerBetter/yml2env
+          go build -o $OLDPWD/built-binary/yml2env-$(date +%s)
+
+  - put: release-candidate
+    params:
+      file: built-binary/yml2env-*
