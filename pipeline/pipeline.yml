@@ -22,12 +22,33 @@ resources:
     access_key_id: access_key
     secret_access_key: secret_access_key
 
+- name: test-report
+  type: s3
+  source: 
+    endpoint: minio1:9000
+    disable_ssl: true
+    bucket: test-reports
+    regexp: junit-(.*).xml
+    access_key_id: access_key
+    secret_access_key: secret_access_key
+
 - name: golang-image
   type: docker-image
   source:
     repository: dockerregistry:5000/student/golang-image
     insecure_registries: 
       - dockerregistry:5000
+
+- name: send-email
+  type: email
+  source: 
+    from: bishwajit.samanta@mailsac.com
+
+resource_types:
+- name: email
+  type: docker-image
+  source:
+    repository: mdomke/concourse-email-resource
 
 jobs:
 - name: build-image
@@ -94,9 +115,27 @@ jobs:
 
       params:
         FIXTURE_LOCATION: fixtures/
+        FLAKE: anyvalue/
 
       outputs:
       - name: built-binary
-      
+      - name: test-report
+
       run:
         path: gopath/src/github.com/EngineerBetter/yml2env/test.sh
+
+# Config and on_failure should be in the same indentation
+
+    on_failure:
+      do:
+      - put: send-email
+        params: 
+          to: 
+          - bishwajit.samanta@mailsac.com
+          subject_text: subject
+          body_text: body
+          
+      - put: test-report
+        params: 
+          file: test-report/junit-*.xml
+        
